@@ -5,6 +5,7 @@ from typing import Tuple
 from sklearn.cluster import DBSCAN
 from azure.ai.anomalydetector import AnomalyDetectorClient
 #from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint
+from azure.ai.anomalydetector.models import TimeSeriesPoint
 from azure.ai.anomalydetector import AnomalyDetectorClient
 from azure.ai.anomalydetector.models import UnivariateDetectionOptions
 from azure.core.credentials import AzureKeyCredential
@@ -132,12 +133,20 @@ class DQAnalyzer:
         anomalies = []
 
         for batch in dataframe_batches:
-            request = DetectRequest(
+            #request = DetectRequest(
+            #    series=[
+            #        TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
+            #        for index, items in batch.iterrows()
+            #    ],
+            #    sensitivity=DQAnalyzer.__ANOMALY_DETECTION_SENSIVITY,
+            #)
+            request = UnivariateDetectionOptions(
                 series=[
                     TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
                     for index, items in batch.iterrows()
                 ],
-                sensitivity=DQAnalyzer.__ANOMALY_DETECTION_SENSIVITY,
+                sensitivity=DQAnalyzer._DQAnalyzer__ANOMALY_DETECTION_SENSIVITY,  # если переменная приватная
+                granularity="daily"  # или "hourly" — укажи в зависимости от твоих данных
             )
             response = client.detect_entire_series(request)
             if any(response.is_anomaly):
@@ -193,21 +202,20 @@ class DQAnalyzer:
         is_meterreading = check_for_meterreading()
         is_pulse = not is_meterreading
 
-        report = {
-            'status':
-                DQAnalyzer.__MSG_CLASSIFICATION_DEFINED if is_meterreading != is_pulse
-                else DQAnalyzer.__MSG_CLASSIFICATION_NOT_DEFINED,
-            'ecoscada_info': {
-                'ecoscada_input_type': Input.get_type_name_by_id(input_type_id),
-                'is_meter_bidirectional': is_bidirectional
-            },
-            'type_classification': {
-                'is_meterreading': is_meterreading,
-                'is_pulse': is_pulse
-            }
-        }
-
-        return report
+      #  report = {
+      #      'status':
+      #          DQAnalyzer.__MSG_CLASSIFICATION_DEFINED if is_meterreading != is_pulse
+      #          else DQAnalyzer.__MSG_CLASSIFICATION_NOT_DEFINED,
+      #      'ecoscada_info': {
+      #          'ecoscada_input_type': Input.get_type_name_by_id(input_type_id),
+      #          'is_meter_bidirectional': is_bidirectional
+      #      },
+      #      'type_classification': {
+      #          'is_meterreading': is_meterreading,
+      #          'is_pulse': is_pulse
+      #      }
+      #  }
+       # return report
 
     @staticmethod
     def classify_input_profile(df: pd.DataFrame, timedelta: pd.Timedelta) -> dict:

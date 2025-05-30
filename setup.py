@@ -4,7 +4,7 @@ setup(
     name="dataquality",
     version="0.1.0",
     packages=find_packages(),
-    install_requires=["numpy", "pandas", "scikit-learn","typing","sklearn","asure","os"],
+    install_requires=["numpy", "pandas", "scikit-learn","typing","sklearn","azure-ai-anomalydetector","os"],
     author="WetMix",
     description="Library for analyzing data quality in time series.",
     long_description=open("README.md").read(),
