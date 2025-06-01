@@ -4,7 +4,7 @@ import pandas as pd
 from typing import Tuple
 from sklearn.cluster import DBSCAN
 from azure.ai.anomalydetector import AnomalyDetectorClient
-# from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint
+# from azure.ai.anomalydetector.models import TimeSeriesPoint
 from azure.ai.anomalydetector.models import TimeSeriesPoint
 from azure.ai.anomalydetector import AnomalyDetectorClient
 from azure.ai.anomalydetector.models import UnivariateDetectionOptions
@@ -142,50 +142,50 @@ class DQAnalyzer:
 
         return df, report
 
-    '''
-    @staticmethod
-    def analyze_anomalies(df: pd.DataFrame) -> dict:
 
+@staticmethod
+def analyze_anomalies(df: pd.DataFrame) -> dict:
+    '''
         Использует внешний API Azure Anomaly Detector для определения аномальных точек во всём временном ряду.
         Возвращает:
             Список аномальных точек.
             Количество аномалий.
             Статус: найдены/не найдены.
-
-        client = AnomalyDetectorClient(
+     '''
+    client = AnomalyDetectorClient(
             AzureKeyCredential(os.getenv('ANOMALY_DETECTOR_KEY')),
             os.getenv('ANOMALY_DETECTOR_ENDPOINT')
+    )
+
+    batch_size = 8640  # API limit for one request
+    dataframe_batches = [df[i: i + batch_size] for i in range(0, len(df), batch_size)]
+
+    anomalies = []
+
+    for batch in dataframe_batches:
+        #request = DetectRequest(
+        #    series=[
+        #        TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
+        #        for index, items in batch.iterrows()
+        #    ],
+        #    sensitivity=DQAnalyzer.__ANOMALY_DETECTION_SENSIVITY,
+        #)
+        request = UnivariateDetectionOptions(
+            series=[
+                TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
+                for index, items in batch.iterrows()
+            ],
+            sensitivity=DQAnalyzer._DQAnalyzer__ANOMALY_DETECTION_SENSIVITY,  # если переменная приватная
+            granularity="daily"  # или "hourly" — укажи в зависимости от твоих данных
         )
-
-        batch_size = 8640  # API limit for one request
-        dataframe_batches = [df[i: i + batch_size] for i in range(0, len(df), batch_size)]
-
-        anomalies = []
-
-        for batch in dataframe_batches:
-            request = DetectRequest(
-                series=[
-                    TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
-                    for index, items in batch.iterrows()
-                ],
-                sensitivity=DQAnalyzer.__ANOMALY_DETECTION_SENSIVITY,
-            )
-            request = UnivariateDetectionOptions(
-                series=[
-                    TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
-                    for index, items in batch.iterrows()
-                ],
-                sensitivity=DQAnalyzer._DQAnalyzer__ANOMALY_DETECTION_SENSIVITY,  # если переменная приватная
-                granularity="daily"  # или "hourly" — укажи в зависимости от твоих данных
-            )
-            response = client.detect_entire_series(request)
-            if any(response.is_anomaly):
-                for i, value in enumerate(response.is_anomaly):
-                    if value:
-                        anomalies.append({
-                            'timestamp': str(batch.index[i]),
-                            'value': batch[batch.columns[0]][i]
-                        })
+        response = client.detect_entire_series(request)
+        if any(response.is_anomaly):
+            for i, value in enumerate(response.is_anomaly):
+                if value:
+                    anomalies.append({
+                        'timestamp': str(batch.index[i]),
+                        'value': batch[batch.columns[0]][i]
+                    })
 
         report = {
             'status': DQAnalyzer.__MSG_ISSUES_FOUND if anomalies else DQAnalyzer.__MSG_ISSUES_NOT_FOUND,
@@ -194,7 +194,7 @@ class DQAnalyzer:
         }
 
         return report
-    '''
+
 
     @staticmethod
     def __classify_input_type(df: pd.DataFrame, is_bidirectional: bool, input_type_id: int) -> dict:  # Работает
