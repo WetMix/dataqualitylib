@@ -11,7 +11,7 @@ from azure.ai.anomalydetector.models import UnivariateDetectionOptions
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials import AzureKeyCredential
 
-from input import Input
+from .input import Input
 
 
 class DQAnalyzer:
