@@ -247,7 +247,7 @@ class DQAnalyzer:
             }
         }
 
-        return report
+        return df, report
 
     @staticmethod
     def classify_input_profile(df: pd.DataFrame, timedelta: pd.Timedelta) -> dict:
@@ -299,4 +299,4 @@ class DQAnalyzer:
             }
         }
 
-        return report
+        return df, report
