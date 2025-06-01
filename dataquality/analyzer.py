@@ -4,12 +4,16 @@ import pandas as pd
 from typing import Tuple
 from sklearn.cluster import DBSCAN
 from azure.ai.anomalydetector import AnomalyDetectorClient
-#from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint
+# from azure.ai.anomalydetector.models import DetectRequest, TimeSeriesPoint
 from azure.ai.anomalydetector.models import TimeSeriesPoint
 from azure.ai.anomalydetector import AnomalyDetectorClient
 from azure.ai.anomalydetector.models import UnivariateDetectionOptions
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials import AzureKeyCredential
+
+from input import Input
+
+
 class DQAnalyzer:
     """Implementation of data quality algorithms"""
     __ANOMALY_DETECTION_SENSIVITY = 0.5
@@ -23,10 +27,10 @@ class DQAnalyzer:
     __MSG_CLASSIFICATION_DEFINED = 'Classification is defined'
     __MSG_CLASSIFICATION_NOT_DEFINED = 'Classification is not defined'
 
-    #def __init__(self, algorithms: Tuple[bool]):
+    # def __init__(self, algorithms: Tuple[bool]):
     #    self.__algorithms = algorithms
 
-    #def analyze(self, df: pd.DataFrame) -> (pd.DataFrame, dict):
+    # def analyze(self, df: pd.DataFrame) -> (pd.DataFrame, dict):
     #    general_report = dict()
 
     #    if self.__algorithms[0]:
@@ -41,16 +45,24 @@ class DQAnalyzer:
     #    if self.__algorithms[3]:
     #        report = DQAnalyzer.__analyze_anomalies(df)
     #        general_report['anomalies'] = report
-        #if self.__algorithms[4]:
-        #    report = DQAnalyzer.__classify_input_type(df, input_.is_meter_bidirectional(), input_.get_type_id())
-        #    general_report['input_type'] = report
-        #if self.__algorithms[5]:
-        #    report = DQAnalyzer.__classify_input_profile(df, input_.get_gate_time_interval_timedelta())
-        #    general_report['input_profile'] = report
-     #   return df, general_report
+    # if self.__algorithms[4]:
+    #    report = DQAnalyzer.__classify_input_type(df, input_.is_meter_bidirectional(), input_.get_type_id())
+    #    general_report['input_type'] = report
+    # if self.__algorithms[5]:
+    #    report = DQAnalyzer.__classify_input_profile(df, input_.get_gate_time_interval_timedelta())
+    #    general_report['input_profile'] = report
+    #   return df, general_report
 
     @staticmethod
-    def analyze_data_from_future(df: pd.DataFrame) -> (pd.DataFrame, dict):
+    def analyze_data_from_future(df: pd.DataFrame) -> (pd.DataFrame, dict):  # работает
+        '''
+        Проверяет, нет ли записей во временном ряде с меткой времени, которая находится в будущем
+        (по сравнению с текущим моментом). Это может быть признаком ошибки сбора данных.
+        Возвращает:
+            Количество точек из будущего.
+            Границу времени (текущее время UTC).
+            Статус: найдены/не найдены.
+        '''
         boundary_timestamp = pd.Timestamp.now(tz='utc')
         data_from_future = df[df.index > boundary_timestamp]
 
@@ -63,7 +75,14 @@ class DQAnalyzer:
         return df, report
 
     @staticmethod
-    def analyze_gaps(df: pd.DataFrame) -> (pd.DataFrame, dict):
+    def analyze_gaps(df: pd.DataFrame) -> (pd.DataFrame, dict):  # работает
+        '''
+        Определяет наличие пропусков в данных по временному индексу. Если разница между соседними отметками
+        времени больше 1 часа — это считается пропуском.
+        Возвращает:
+            Количество пропусков.
+            Статус: есть/нет пропусков.
+        '''
         df_sorted = df.sort_index()
         gaps_timestamps = df_sorted.index.to_series().diff().gt(pd.Timedelta("1h")).sum()
 
@@ -75,7 +94,10 @@ class DQAnalyzer:
         return df, report
 
     @staticmethod
-    def analyze_outliers(df: pd.DataFrame) -> (pd.DataFrame, dict):
+    def analyze_outliers(df: pd.DataFrame) -> (pd.DataFrame, dict):  # работает
+        '''
+        Обнаруживает выбросы на основе анализа разностей между соседними значениями.
+        '''
         value_column = df.columns[0]
 
         absolute_differences = []
@@ -120,8 +142,16 @@ class DQAnalyzer:
 
         return df, report
 
+    '''
     @staticmethod
     def analyze_anomalies(df: pd.DataFrame) -> dict:
+
+        Использует внешний API Azure Anomaly Detector для определения аномальных точек во всём временном ряду.
+        Возвращает:
+            Список аномальных точек.
+            Количество аномалий.
+            Статус: найдены/не найдены.
+
         client = AnomalyDetectorClient(
             AzureKeyCredential(os.getenv('ANOMALY_DETECTOR_KEY')),
             os.getenv('ANOMALY_DETECTOR_ENDPOINT')
@@ -133,13 +163,13 @@ class DQAnalyzer:
         anomalies = []
 
         for batch in dataframe_batches:
-            #request = DetectRequest(
-            #    series=[
-            #        TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
-            #        for index, items in batch.iterrows()
-            #    ],
-            #    sensitivity=DQAnalyzer.__ANOMALY_DETECTION_SENSIVITY,
-            #)
+            request = DetectRequest(
+                series=[
+                    TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
+                    for index, items in batch.iterrows()
+                ],
+                sensitivity=DQAnalyzer.__ANOMALY_DETECTION_SENSIVITY,
+            )
             request = UnivariateDetectionOptions(
                 series=[
                     TimeSeriesPoint(timestamp=pd.Timestamp(index).isoformat(), value=items[0])
@@ -164,8 +194,10 @@ class DQAnalyzer:
         }
 
         return report
+    '''
+
     @staticmethod
-    def classify_input_type(df: pd.DataFrame, is_bidirectional: bool, input_type_id: int) -> dict:
+    def __classify_input_type(df: pd.DataFrame, is_bidirectional: bool, input_type_id: int) -> dict:  # Работает
         value_column = df.columns[0]
 
         def check_for_meterreading():
@@ -202,20 +234,21 @@ class DQAnalyzer:
         is_meterreading = check_for_meterreading()
         is_pulse = not is_meterreading
 
-      #  report = {
-      #      'status':
-      #          DQAnalyzer.__MSG_CLASSIFICATION_DEFINED if is_meterreading != is_pulse
-      #          else DQAnalyzer.__MSG_CLASSIFICATION_NOT_DEFINED,
-      #      'ecoscada_info': {
-      #          'ecoscada_input_type': Input.get_type_name_by_id(input_type_id),
-      #          'is_meter_bidirectional': is_bidirectional
-      #      },
-      #      'type_classification': {
-      #          'is_meterreading': is_meterreading,
-      #          'is_pulse': is_pulse
-      #      }
-      #  }
-       # return report
+        report = {
+            'status':
+                DQAnalyzer.__MSG_CLASSIFICATION_DEFINED if is_meterreading != is_pulse
+                else DQAnalyzer.__MSG_CLASSIFICATION_NOT_DEFINED,
+            'ecoscada_info': {
+                'ecoscada_input_type': Input.get_type_name_by_id(input_type_id),
+                'is_meter_bidirectional': is_bidirectional
+            },
+            'type_classification': {
+                'is_meterreading': is_meterreading,
+                'is_pulse': is_pulse
+            }
+        }
+
+        return report
 
     @staticmethod
     def classify_input_profile(df: pd.DataFrame, timedelta: pd.Timedelta) -> dict:
@@ -229,7 +262,7 @@ class DQAnalyzer:
 
         def check_for_solar():
             freq = int(pd.Timedelta(1, unit='d') / timedelta)
-            test_set = pd.read_csv(f'/dbfs/FileStore/mock_data/solar_sample.csv', index_col=0)
+            test_set = pd.read_csv(f'./solar_sample.csv', index_col=0)
             test_set = test_set / test_set.max()
             test_set = test_set.replace(np.inf, 0).fillna(0)
             df_period = df[:DQAnalyzer.__SOLAR_DAYS_COUNT * freq]
