@@ -2,9 +2,9 @@
 import pandas as pd
 from typing import List
 
-from building import Building
-from cug import CUG
-from measurement import Measurement
+from .building import Building
+from .cug import CUG
+from .measurement import Measurement
 
 # COMMAND ----------
 
