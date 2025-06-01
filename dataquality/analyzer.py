@@ -196,7 +196,7 @@ class DQAnalyzer:
            return df, report
 
     @staticmethod
-    def __classify_input_type(df: pd.DataFrame, is_bidirectional: bool, input_type_id: int) -> dict:  # Работает
+    def classify_input_type(df: pd.DataFrame, is_bidirectional: bool, input_type_id: int) -> dict:  # Работает
         value_column = df.columns[0]
 
         def check_for_meterreading():
