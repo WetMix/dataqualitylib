@@ -248,7 +248,7 @@ class DQAnalyzer:
         }
 
         return df, report
-
+    #Пока что не работает
     @staticmethod
     def classify_input_profile(df: pd.DataFrame, timedelta: pd.Timedelta) -> dict:
         value_column = df.columns[0]
