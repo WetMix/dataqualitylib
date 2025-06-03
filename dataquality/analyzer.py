@@ -271,6 +271,7 @@ class DQAnalyzer:
             ]
             df_period = df_period / df_period.max()
 
+
             intersected_rows = test_set.loc[test_set.index.intersection(df_period.index)]
             df_test = pd.DataFrame({value_column: intersected_rows.iloc[:, 0]})
 
