@@ -261,10 +261,7 @@ class DQAnalyzer:
 
         def check_for_solar():
             freq = int(pd.Timedelta(1, unit='d') / timedelta)
-            #test_set = pd.read_csv(f'./solar_sample.csv', index_col=0)
-            current_dir = os.path.dirname(__file__)
-            solar_path = os.path.join(current_dir, 'solar_sample.csv')
-            test_set = pd.read_csv(solar_path, index_col=0)
+            test_set = pd.read_csv('/opt/airflow/data/solar_sample.csv', index_col=0)
             test_set = test_set / test_set.max()
             test_set = test_set.replace(np.inf, 0).fillna(0)
             df_period = df[:DQAnalyzer.__SOLAR_DAYS_COUNT * freq]
@@ -302,4 +299,4 @@ class DQAnalyzer:
             }
         }
 
-        return df, report
+        return report
