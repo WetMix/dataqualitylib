@@ -249,40 +249,40 @@ class DQAnalyzer:
 
         return df, report
     #Пока что не работает
-    @staticmethod
-    def classify_input_profile(df: pd.DataFrame, timedelta: pd.Timedelta) -> dict:
-        value_column = df.columns[0]
+   # @staticmethod
+   # def classify_input_profile(df: pd.DataFrame, timedelta: pd.Timedelta) -> dict:
+   #     value_column = df.columns[0]
 
-        def scaled_mean_absolute_error(y_true: pd.DataFrame, y_pred: pd.DataFrame):
-            result = (y_true - y_pred).abs().sum() * np.mean(y_true.abs()) / len(y_true)
-            if np.isnan(result[value_column]):
-                return 100
-            return result[value_column]
+    #    def scaled_mean_absolute_error(y_true: pd.DataFrame, y_pred: pd.DataFrame):
+    #        result = (y_true - y_pred).abs().sum() * np.mean(y_true.abs()) / len(y_true)
+    #        if np.isnan(result[value_column]):
+    #            return 100
+    #        return result[value_column]
 
-        def check_for_solar():
-            freq = int(pd.Timedelta(1, unit='d') / timedelta)
-            test_set = pd.read_csv('/opt/airflow/data/solar_sample.csv', index_col=0)
-            test_set = test_set / test_set.max()
-            test_set = test_set.replace(np.inf, 0).fillna(0)
-            df_period = df[:DQAnalyzer.__SOLAR_DAYS_COUNT * freq]
-            df_period.index = [
-                index.strftime('%m-%d %H:%M:%S')
-                for index in df_period.index
-            ]
-            df_period = df_period / df_period.max()
+     #   def check_for_solar():
+     #       freq = int(pd.Timedelta(1, unit='d') / timedelta)
+     #       test_set = pd.read_csv('/opt/airflow/data/solar_sample.csv', index_col=0)
+     #       test_set = test_set / test_set.max()
+     #       test_set = test_set.replace(np.inf, 0).fillna(0)
+     #       df_period = df[:DQAnalyzer.__SOLAR_DAYS_COUNT * freq]
+     #       df_period.index = [
+     #           index.strftime('%m-%d %H:%M:%S')
+     #           for index in df_period.index
+     #       ]
+     #       df_period = df_period / df_period.max()
 
 
-            intersected_rows = test_set.loc[test_set.index.intersection(df_period.index)]
-            df_test = pd.DataFrame({value_column: intersected_rows.iloc[:, 0]})
+      #      intersected_rows = test_set.loc[test_set.index.intersection(df_period.index)]
+      #      df_test = pd.DataFrame({value_column: intersected_rows.iloc[:, 0]})
 
-            solar_error = scaled_mean_absolute_error(df_test, df_period)
-            for i in range(1, len(test_set.columns)):
-                df_test = pd.DataFrame({value_column: intersected_rows.iloc[:, i]})
-                error = scaled_mean_absolute_error(df_test, df_period)
-                if error < solar_error:
-                    solar_error = error
+       #     solar_error = scaled_mean_absolute_error(df_test, df_period)
+       #     for i in range(1, len(test_set.columns)):
+       #         df_test = pd.DataFrame({value_column: intersected_rows.iloc[:, i]})
+       #         error = scaled_mean_absolute_error(df_test, df_period)
+       #         if error < solar_error:
+       #             solar_error = error
 
-            return True if solar_error < 5 else False
+        #    return True if solar_error < 5 else False
 
         def check_for_grid():
             raise NotImplementedError
