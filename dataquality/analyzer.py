@@ -351,75 +351,75 @@ class DQAnalyzer:
     #Пока что не работает
 
 
-@staticmethod
-def classify_input_profile(df: pd.DataFrame, datetime_col: str, path: str, timedelta: pd.Timedelta) -> dict:
-    df_copy = df.copy()
+    @staticmethod
+    def classify_input_profile(df: pd.DataFrame, datetime_col: str, path: str, timedelta: pd.Timedelta) -> dict:
+       df_copy = df.copy()
 
-    # 1. Преобразуем столбец в datetime
-    try:
-        df_copy[datetime_col] = pd.to_datetime(
-            df_copy[datetime_col],
-            errors='coerce',
-            infer_datetime_format=True
-        )
-        if df_copy[datetime_col].isnull().all():
-            raise ValueError(f"Column {datetime_col} cannot be converted to datetime")
-    except Exception as e:
-        raise ValueError(f"Datetime conversion failed: {str(e)}")
+       # 1. Преобразуем столбец в datetime
+       try:
+           df_copy[datetime_col] = pd.to_datetime(
+               df_copy[datetime_col],
+               errors='coerce',
+               infer_datetime_format=True
+           )
+           if df_copy[datetime_col].isnull().all():
+               raise ValueError(f"Column {datetime_col} cannot be converted to datetime")
+       except Exception as e:
+           raise ValueError(f"Datetime conversion failed: {str(e)}")
 
     # 2. Устанавливаем datetime как индекс
-    df_copy = df_copy.set_index(datetime_col)
+       df_copy = df_copy.set_index(datetime_col)
 
     # 3. Проверяем solar профиль
-    def scaled_mean_absolute_error(y_true: pd.Series, y_pred: pd.Series) -> float:
-        result = (y_true - y_pred).abs().mean() * y_true.abs().mean()
-        return 100 if np.isnan(result) else result
+       def scaled_mean_absolute_error(y_true: pd.Series, y_pred: pd.Series) -> float:
+           result = (y_true - y_pred).abs().mean() * y_true.abs().mean()
+           return 100 if np.isnan(result) else result
 
-    def check_for_solar() -> bool:
-        try:
-            freq = int(pd.Timedelta(days=1) / timedelta)  # Закрывающая скобка была пропущена
-            test_set = pd.read_csv(path, index_col=0)
-            test_set = test_set / test_set.max()
-            test_set = test_set.replace([np.inf, -np.inf], 0).fillna(0)
+       def check_for_solar() -> bool:
+           try:
+               freq = int(pd.Timedelta(days=1) / timedelta)  # Закрывающая скобка была пропущена
+               test_set = pd.read_csv(path, index_col=0)
+               test_set = test_set / test_set.max()
+               test_set = test_set.replace([np.inf, -np.inf], 0).fillna(0)
 
             # Берем первые N дней данных
-            df_period = df_copy.iloc[:int(DQAnalyzer.__SOLAR_DAYS_COUNT * freq)]
+               df_period = df_copy.iloc[:int(DQAnalyzer.__SOLAR_DAYS_COUNT * freq)]
 
             # Нормализуем данные
-            df_period_normalized = df_period / df_period.max()
+               df_period_normalized = df_period / df_period.max()
 
             # Сравниваем с тестовыми данными
-            solar_error = float('inf')
-            for test_col in test_set.columns:
-                common_index = test_set.index.intersection(df_period_normalized.index)
-                if len(common_index) == 0:
-                    continue
+               solar_error = float('inf')
+               for test_col in test_set.columns:
+                   common_index = test_set.index.intersection(df_period_normalized.index)
+                   if len(common_index) == 0:
+                       continue
 
-                current_error = scaled_mean_absolute_error(
-                    test_set.loc[common_index, test_col],
-                    df_period_normalized.loc[common_index, df_period_normalized.columns[0]]
-                )
+                   current_error = scaled_mean_absolute_error(
+                       test_set.loc[common_index, test_col],
+                       df_period_normalized.loc[common_index, df_period_normalized.columns[0]]
+                   )
 
-                if current_error < solar_error:
-                    solar_error = current_error
+                   if current_error < solar_error:
+                       solar_error = current_error
 
-            return solar_error < 5  # Пороговое значение
+               return solar_error < 5  # Пороговое значение
 
-        except Exception as e:
-            print(f"Solar check error: {str(e)}")
-            return False
+           except Exception as e:
+               print(f"Solar check error: {str(e)}")
+               return False
 
-    is_solar = check_for_solar()
-    is_grid = not is_solar
+       is_solar = check_for_solar()
+       is_grid = not is_solar
 
-    return {
-        'status': (
-            DQAnalyzer.__MSG_CLASSIFICATION_DEFINED
-            if is_solar != is_grid
-            else DQAnalyzer.__MSG_CLASSIFICATION_NOT_DEFINED
-        ),
-        'profile_classification': {
-            'is_solar': is_solar,
-            'is_grid': is_grid
-        }
-    }
+       return {
+           'status': (
+               DQAnalyzer.__MSG_CLASSIFICATION_DEFINED
+               if is_solar != is_grid
+               else DQAnalyzer.__MSG_CLASSIFICATION_NOT_DEFINED
+           ),
+           'profile_classification': {
+               'is_solar': is_solar,
+               'is_grid': is_grid
+           }
+       }
